@@ -13,7 +13,7 @@
 #include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
 
-constexpr uint16_t MaxPixelCount = 144;  // Common LED strip size
+constexpr uint16_t MaxPixelCount = 144; // Common LED strip size
 constexpr uint8_t PixelPin = 12;
 constexpr uint8_t AnimationChannels = 1;
 constexpr uint8_t SnakeSegmentLength = 5;
@@ -506,7 +506,7 @@ void FadeInFadeOutRinseRepeat(float luminance)
 {
   // Generate a new random color target
   RgbColor target = HslColor(random(360) / 360.0f, 1.0f, luminance);
-  
+
   // Use longer, smoother fade times for gentle color transitions
   uint16_t time = random(2000, 4000);
 
@@ -523,7 +523,7 @@ void FadeInFadeOutRinseRepeat(float luminance)
     RgbColor currentColor = strip.GetPixelColor(0);
     fadeChannels[0].StartingColor = currentColor;
   }
-  
+
   // Set the new target color
   fadeChannels[0].EndingColor = target;
   animations.StartAnimation(0, time, BlendAnimUpdate);
