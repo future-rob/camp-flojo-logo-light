@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Wifi Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+  <div class="topnav">
+    <h1>Wifi Manager</h1>
+    <label>Connect kit to WIFI</label>
+  </div>
+  <div class="content">
+    <div class="card-grid">
+      <div class="card">
+        <form action="/" method="POST">
+            <label for="ssid">Network Name</label>
+            <br>
+            <input type="text" id ="ssid" name="ssid">
+            <br>
+            <label for="pass">Password</label>
+            <br>
+            <input type="password" id ="pass" name="pass">
+            <br>
+            <label for="ip">IP Address</label>
+            <br>
+            <input type="text" id ="ip" name="ip" value="192.168.1.200">
+            <br>
+            <label for="gateway">Gateway Address</label>
+            <br>
+            <input type="text" id ="gateway" name="gateway" value="192.168.1.1">
+            <br>
+            <input type ="submit" value ="Submit">
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

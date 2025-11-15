@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LED Strip Control</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header>
+    <h1>LED Strip Control</h1>
+    <div class="connection-status" id="connection-status">Connecting...</div>
+  </header>
+
+  <main>
+    <div class="control-panel">
+      <!-- Mode Selection -->
+      <div class="control-group">
+        <label>Mode</label>
+        <div class="mode-buttons">
+          <button class="mode-btn" data-mode="solid">Solid Color</button>
+          <button class="mode-btn" data-mode="fade">Color Fade</button>
+          <button class="mode-btn" data-mode="snake">Snake</button>
+          <button class="mode-btn" data-mode="off">Off</button>
+        </div>
+      </div>
+
+      <!-- Color Picker -->
+      <div class="control-group" id="color-control">
+        <label>Color</label>
+        <div class="color-picker-row">
+          <input type="color" id="color-picker" value="#ff500a">
+          <div class="color-preview" id="color-preview"></div>
+        </div>
+      </div>
+
+      <!-- Brightness -->
+      <div class="control-group">
+        <label>Brightness <span id="brightness-value">160</span></label>
+        <input type="range" id="brightness" min="0" max="255" value="160" class="slider">
+      </div>
+
+      <!-- Pixel Count -->
+      <div class="control-group">
+        <label>Active LEDs <span id="pixel-count-value">12</span></label>
+        <input type="range" id="pixel-count" min="1" max="144" value="12" class="slider">
+      </div>
+
+      <!-- Preset Colors -->
+      <div class="control-group" id="preset-colors">
+        <label>Quick Colors</label>
+        <div class="color-presets">
+          <button class="color-preset" data-color="#ffffff" style="background-color: #ffffff"></button>
+          <button class="color-preset" data-color="#ff0000" style="background-color: #ff0000"></button>
+          <button class="color-preset" data-color="#ff8800" style="background-color: #ff8800"></button>
+          <button class="color-preset" data-color="#ffff00" style="background-color: #ffff00"></button>
+          <button class="color-preset" data-color="#00ff00" style="background-color: #00ff00"></button>
+          <button class="color-preset" data-color="#00ffff" style="background-color: #00ffff"></button>
+          <button class="color-preset" data-color="#0088ff" style="background-color: #0088ff"></button>
+          <button class="color-preset" data-color="#ff00ff" style="background-color: #ff00ff"></button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // State variables
+    let currentMode = 'fade';
+    let currentColor = '#ff500a';
+    let currentBrightness = 160;
+    let currentPixelCount = 12;
+    let updatePending = false;
+
+    // DOM elements
+    const connectionStatus = document.getElementById('connection-status');
+    const colorPicker = document.getElementById('color-picker');
+    const colorPreview = document.getElementById('color-preview');
+    const brightnessSlider = document.getElementById('brightness');
+    const brightnessValue = document.getElementById('brightness-value');
+    const pixelCountSlider = document.getElementById('pixel-count');
+    const pixelCountValue = document.getElementById('pixel-count-value');
+    const colorControl = document.getElementById('color-control');
+    const presetColors = document.getElementById('preset-colors');
+
+    // Utility functions
+    function hexToRgb(hex) {
+      const clean = hex.replace('#', '');
+      return {
+        r: parseInt(clean.substring(0, 2), 16),
+        g: parseInt(clean.substring(2, 4), 16),
+        b: parseInt(clean.substring(4, 6), 16)
+      };
+    }
+
+    function rgbToHex({ r, g, b }) {
+      const toHex = (v) => v.toString(16).padStart(2, '0');
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    function updateColorPreview() {
+      colorPreview.style.backgroundColor = colorPicker.value;
+    }
+
+    function updateModeDisplay() {
+      // Update button states
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === currentMode);
+      });
+
+      // Show/hide color controls based on mode
+      const showColor = currentMode === 'solid' || currentMode === 'snake';
+      colorControl.style.display = showColor ? 'block' : 'none';
+      presetColors.style.display = showColor ? 'block' : 'none';
+    }
+
+    function updateConnectionStatus(connected, ip = null) {
+      if (connected) {
+        connectionStatus.textContent = ip ? `Connected: ${ip}` : 'Connected';
+        connectionStatus.classList.add('connected');
+      } else {
+        connectionStatus.textContent = 'Disconnected';
+        connectionStatus.classList.remove('connected');
+      }
+    }
+
+    // API functions
+    async function sendUpdate() {
+      if (updatePending) return;
+      updatePending = true;
+
+      try {
+        const params = new URLSearchParams({
+          mode: currentMode,
+          brightness: currentBrightness,
+          count: currentPixelCount
+        });
+
+        if (currentMode === 'solid' || currentMode === 'snake') {
+          const rgb = hexToRgb(currentColor);
+          params.set('r', rgb.r);
+          params.set('g', rgb.g);
+          params.set('b', rgb.b);
+        }
+
+        const response = await fetch(`/api/control?${params}`);
+        if (response.ok) {
+          const data = await response.json();
+          updateConnectionStatus(true, data.ip);
+        }
+      } catch (error) {
+        console.error('Failed to send update:', error);
+        updateConnectionStatus(false);
+      } finally {
+        updatePending = false;
+      }
+    }
+
+    async function fetchState() {
+      try {
+        const response = await fetch('/api/state');
+        if (response.ok) {
+          const data = await response.json();
+
+          // Update UI with fetched state
+          currentMode = data.mode;
+          currentColor = rgbToHex(data.color);
+          currentBrightness = data.brightness;
+          currentPixelCount = data.count || 12;
+
+          colorPicker.value = currentColor;
+          brightnessSlider.value = currentBrightness;
+          brightnessValue.textContent = currentBrightness;
+          pixelCountSlider.value = currentPixelCount;
+          pixelCountValue.textContent = currentPixelCount;
+
+          updateColorPreview();
+          updateModeDisplay();
+          updateConnectionStatus(true, data.ip);
+        }
+      } catch (error) {
+        console.error('Failed to fetch state:', error);
+        updateConnectionStatus(false);
+      }
+    }
+
+    // Event handlers
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentMode = btn.dataset.mode;
+        updateModeDisplay();
+        sendUpdate();
+      });
+    });
+
+    colorPicker.addEventListener('input', () => {
+      currentColor = colorPicker.value;
+      updateColorPreview();
+    });
+
+    colorPicker.addEventListener('change', () => {
+      sendUpdate();
+    });
+
+    brightnessSlider.addEventListener('input', () => {
+      currentBrightness = parseInt(brightnessSlider.value);
+      brightnessValue.textContent = currentBrightness;
+    });
+
+    brightnessSlider.addEventListener('change', sendUpdate);
+
+    pixelCountSlider.addEventListener('input', () => {
+      currentPixelCount = parseInt(pixelCountSlider.value);
+      pixelCountValue.textContent = currentPixelCount;
+    });
+
+    pixelCountSlider.addEventListener('change', sendUpdate);
+
+    document.querySelectorAll('.color-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentColor = btn.dataset.color;
+        colorPicker.value = currentColor;
+        updateColorPreview();
+        sendUpdate();
+      });
+    });
+
+    // Initialize
+    updateColorPreview();
+    updateModeDisplay();
+    fetchState();
+
+    // Periodic state sync
+    setInterval(fetchState, 10000);
+  </script>
+</body>
+
+</html>
